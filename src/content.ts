@@ -304,7 +304,8 @@ class SlackEmojiRenderer {
   private setupInputListeners(): void {
     console.log("Setting up input listeners");
     document.addEventListener("input", this.handleInput.bind(this));
-    document.addEventListener("keydown", this.handleKeydown.bind(this));
+    // キーボードイベントをキャプチャフェーズで処理して優先度を上げる
+    document.addEventListener("keydown", this.handleKeydown.bind(this), true);
     document.addEventListener("click", this.handleClick.bind(this));
     console.log("Input listeners setup complete");
   }
@@ -362,41 +363,63 @@ class SlackEmojiRenderer {
   }
 
   private handleKeydown(event: KeyboardEvent): void {
-    if (
-      !this.suggestionBox ||
-      !this.suggestionBox.style.display ||
-      this.suggestionBox.style.display === "none"
-    ) {
+    // サジェストボックスが表示されていない場合は早期リターン
+    if (!this.suggestionBox || !this.suggestionBox.parentNode) {
       return;
     }
+
+    console.log("Keydown event:", event.key, "Suggestion box visible");
 
     const suggestions = this.suggestionBox.querySelectorAll(
       ".emoji-suggestion-item",
     );
+
+    if (suggestions.length === 0) {
+      return;
+    }
+
     let selectedIndex = Array.from(suggestions).findIndex((item) =>
       item.classList.contains("selected"),
+    );
+
+    console.log(
+      "Current selected index:",
+      selectedIndex,
+      "Total suggestions:",
+      suggestions.length,
     );
 
     switch (event.key) {
       case "ArrowDown":
         event.preventDefault();
-        selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+        event.stopPropagation();
+        selectedIndex =
+          selectedIndex < suggestions.length - 1 ? selectedIndex + 1 : 0; // ループする
         this.updateSelectedSuggestion(selectedIndex);
+        console.log("Moving down to index:", selectedIndex);
         break;
       case "ArrowUp":
         event.preventDefault();
-        selectedIndex = Math.max(selectedIndex - 1, 0);
+        event.stopPropagation();
+        selectedIndex =
+          selectedIndex > 0 ? selectedIndex - 1 : suggestions.length - 1; // ループする
         this.updateSelectedSuggestion(selectedIndex);
+        console.log("Moving up to index:", selectedIndex);
         break;
       case "Enter":
       case "Tab":
         event.preventDefault();
+        event.stopPropagation();
         if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+          console.log("Selecting suggestion at index:", selectedIndex);
           this.selectSuggestion(suggestions[selectedIndex] as HTMLDivElement);
         }
         break;
       case "Escape":
+        event.preventDefault();
+        event.stopPropagation();
         this.removeSuggestionBox();
+        console.log("Closing suggestion box");
         break;
     }
   }
@@ -484,6 +507,11 @@ class SlackEmojiRenderer {
       item.appendChild(img);
       item.appendChild(name);
 
+      // マウスオーバーで選択状態を更新
+      item.addEventListener("mouseenter", () => {
+        this.updateSelectedSuggestion(index);
+      });
+
       // マウスダウンイベントでも処理（クリックより確実）
       item.addEventListener("mousedown", (e) => {
         e.preventDefault();
@@ -502,6 +530,8 @@ class SlackEmojiRenderer {
 
     this.positionSuggestionBox(inputElement);
     document.body.appendChild(this.suggestionBox);
+
+    console.log("Suggestion box created with", emojis.length, "items");
   }
 
   private positionSuggestionBox(

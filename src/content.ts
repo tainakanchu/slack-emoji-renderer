@@ -1,3 +1,6 @@
+// Import emoji utilities
+import { getEmojiUrl } from "./emoji-utils";
+
 // Types defined inline for browser compatibility
 type ContentEmojiData = Record<string, string>;
 
@@ -26,7 +29,7 @@ interface MatchResult {
 function fuzzySearch(
   searchTerm: string,
   candidates: string[],
-  maxResults: number = 10,
+  maxResults: number = 10
 ): MatchResult[] {
   const searchLower = searchTerm.toLowerCase();
 
@@ -98,210 +101,6 @@ function calculateFuzzyScore(search: string, target: string): number {
   return Math.max(0, matchRatio + consecutiveBonus - lengthPenalty);
 }
 
-// Edit mode detection configuration
-interface EditModeDetectorConfig {
-  editButtonSelectors?: string[];
-  contentSelectors?: string[];
-  editAreaSelectors?: string[];
-  editButtonTexts?: string[];
-}
-
-/**
- * 編集モードの検出と処理を担当するクラス
- */
-class EditModeDetector {
-  private config: Required<EditModeDetectorConfig>;
-
-  constructor(config: EditModeDetectorConfig = {}) {
-    this.config = {
-      editButtonSelectors: config.editButtonSelectors || [
-        "button",
-        "a",
-        "[role='button']",
-      ],
-      contentSelectors: config.contentSelectors || [
-        // GitHub
-        ".comment-body",
-        ".js-comment-body",
-        ".markdown-body",
-        // Discord
-        ".messageContent",
-        ".markup",
-        // Reddit
-        ".md",
-        ".usertext-body",
-        // Slack
-        ".c-message__body",
-        ".p-rich_text_section",
-        // Twitter/X
-        ".tweet-text",
-        ".css-901oao",
-        // 一般的
-        ".content",
-        ".message",
-        ".post-content",
-        ".comment-content",
-        "[class*='content']",
-        "[class*='message']",
-        "[class*='comment']",
-        "[class*='post']",
-      ],
-      editAreaSelectors: config.editAreaSelectors || [
-        "textarea",
-        "input[type='text']",
-        "[contenteditable='true']",
-        // リッチテキストエディター
-        ".ql-editor",
-        ".tox-edit-area",
-        ".CodeMirror",
-        // 一般的な編集エリア
-        "[class*='editor']",
-        "[class*='input']",
-        "[role='textbox']",
-      ],
-      editButtonTexts: config.editButtonTexts || ["edit", "編集", "修改"],
-    };
-  }
-
-  /**
-   * 要素が編集ボタンかどうかを判定
-   */
-  isEditButton(element: HTMLElement): boolean {
-    if (!element) return false;
-
-    const button = element.closest(this.config.editButtonSelectors.join(", "));
-    if (!button) return false;
-
-    return this.checkEditButtonPatterns(button as HTMLElement);
-  }
-
-  /**
-   * 編集ボタンのパターンをチェック
-   */
-  private checkEditButtonPatterns(button: HTMLElement): boolean {
-    const buttonText = button.textContent?.toLowerCase() || "";
-    const buttonTitle = button.title?.toLowerCase() || "";
-    const buttonAriaLabel =
-      button.getAttribute("aria-label")?.toLowerCase() || "";
-
-    // テキストベースの検出
-    const textMatch = this.config.editButtonTexts.some(
-      (text) =>
-        buttonText.includes(text.toLowerCase()) ||
-        buttonTitle.includes(text.toLowerCase()) ||
-        buttonAriaLabel.includes(text.toLowerCase()),
-    );
-
-    if (textMatch) return true;
-
-    // サイト固有のクラス・アイコン検出
-    return this.checkSiteSpecificEditButtons(button);
-  }
-
-  /**
-   * サイト固有の編集ボタンパターンをチェック
-   */
-  private checkSiteSpecificEditButtons(button: HTMLElement): boolean {
-    // GitHub固有
-    if (
-      button.classList.contains("js-comment-edit-button") ||
-      button.querySelector('[data-octicon="pencil"]') !== null
-    ) {
-      return true;
-    }
-
-    // 一般的なアイコンクラス
-    if (
-      button.querySelector(
-        '.edit-icon, .fa-edit, .fa-pencil, [class*="edit"], [class*="pencil"]',
-      ) !== null
-    ) {
-      return true;
-    }
-
-    // Discord, Slack等のtooltip
-    const ariaLabel = button.getAttribute("aria-label") || "";
-    const dataTooltip = button.getAttribute("data-tooltip") || "";
-    if (ariaLabel.includes("Edit") || dataTooltip.includes("Edit")) {
-      return true;
-    }
-
-    return false;
-  }
-
-  /**
-   * 編集ボタンから編集対象のコンテンツ要素を探す
-   */
-  findEditableContent(button: HTMLElement): HTMLElement | null {
-    let current = button.parentElement;
-
-    while (current && current !== document.body) {
-      const content = current.querySelector(
-        this.config.contentSelectors.join(", "),
-      );
-      if (content) {
-        return content as HTMLElement;
-      }
-      current = current.parentElement;
-    }
-
-    // フォールバック: 最も近い編集可能な要素を探す
-    return this.findNearestEditableParent(button);
-  }
-
-  /**
-   * 最も近い編集可能な要素を含む親要素を探す
-   */
-  private findNearestEditableParent(element: HTMLElement): HTMLElement | null {
-    let current = element.parentElement;
-
-    while (current && current !== document.body) {
-      if (this.hasEditableDescendants(current)) {
-        return current;
-      }
-      current = current.parentElement;
-    }
-
-    return null;
-  }
-
-  /**
-   * 要素が編集可能な子要素を持つかチェック
-   */
-  hasEditableDescendants(element: HTMLElement): boolean {
-    return (
-      element.querySelector(
-        "textarea, input[type='text'], [contenteditable='true']",
-      ) !== null
-    );
-  }
-
-  /**
-   * 編集エリア（テキストエリア等）を探す
-   */
-  findActiveEditArea(parentElement: HTMLElement): HTMLElement | null {
-    const editArea = parentElement.querySelector(
-      this.config.editAreaSelectors.join(", "),
-    );
-    return editArea as HTMLElement;
-  }
-
-  /**
-   * 要素が編集可能かどうかを判定
-   */
-  isEditableElement(element: HTMLElement): boolean {
-    if (!element) return false;
-
-    return (
-      element.tagName === "TEXTAREA" ||
-      (element.tagName === "INPUT" &&
-        (element as HTMLInputElement).type === "text") ||
-      element.contentEditable === "true" ||
-      element.hasAttribute("contenteditable")
-    );
-  }
-}
-
 class SlackEmojiRenderer {
   private emojiData: ContentEmojiData = {};
   private isEnabled: boolean = true;
@@ -310,10 +109,8 @@ class SlackEmojiRenderer {
   private suggestionBox: HTMLDivElement | null = null;
   private currentInput: HTMLInputElement | HTMLTextAreaElement | null = null;
   private currentCaretPosition: number = 0;
-  private editModeDetector: EditModeDetector;
 
   constructor() {
-    this.editModeDetector = new EditModeDetector();
     this.init();
   }
 
@@ -324,7 +121,7 @@ class SlackEmojiRenderer {
     console.log(
       "Loaded emoji data:",
       Object.keys(this.emojiData).length,
-      "emojis",
+      "emojis"
     );
     console.log("Extension enabled:", this.isEnabled);
 
@@ -352,7 +149,7 @@ class SlackEmojiRenderer {
         (result: ContentEmojiStorageData) => {
           this.emojiData = result.emojiData || {};
           resolve();
-        },
+        }
       );
     });
   }
@@ -386,7 +183,7 @@ class SlackEmojiRenderer {
   private processExistingNodes(): void {
     const walker = document.createTreeWalker(
       document.body,
-      NodeFilter.SHOW_TEXT,
+      NodeFilter.SHOW_TEXT
     );
 
     const textNodes: Text[] = [];
@@ -461,8 +258,8 @@ class SlackEmojiRenderer {
 
       uniqueMatches.forEach((match) => {
         const emojiName = match.slice(1, -1);
-        if (this.emojiData[emojiName]) {
-          const emojiUrl = this.emojiData[emojiName];
+        const emojiUrl = getEmojiUrl(emojiName, this.emojiData);
+        if (emojiUrl) {
           const imgTag = `<img src="${emojiUrl}" alt="${match}" title="${match}" class="slack-emoji-renderer" style="width: 1.2em; height: 1.2em; vertical-align: middle; margin: 0 0.1em;">`;
           // split/joinを使用して全ての出現を置換
           newHtml = newHtml.split(match).join(imgTag);
@@ -520,7 +317,7 @@ class SlackEmojiRenderer {
     document.addEventListener(
       "click",
       this.handleEditButtonClick.bind(this),
-      true,
+      true
     );
     console.log("Input listeners setup complete");
   }
@@ -553,7 +350,7 @@ class SlackEmojiRenderer {
         "Input event - value:",
         value,
         "caret:",
-        this.currentCaretPosition,
+        this.currentCaretPosition
       );
 
       // :で始まる未完成の絵文字パターンを検索
@@ -565,7 +362,7 @@ class SlackEmojiRenderer {
           "Found emoji pattern:",
           emojiMatch[0],
           "search term:",
-          searchTerm,
+          searchTerm
         );
         this.showSuggestions(searchTerm, target);
       } else {
@@ -586,7 +383,7 @@ class SlackEmojiRenderer {
     console.log("Keydown event:", event.key, "Suggestion box visible");
 
     const suggestions = this.suggestionBox.querySelectorAll(
-      ".emoji-suggestion-item",
+      ".emoji-suggestion-item"
     );
 
     if (suggestions.length === 0) {
@@ -594,14 +391,14 @@ class SlackEmojiRenderer {
     }
 
     let selectedIndex = Array.from(suggestions).findIndex((item) =>
-      item.classList.contains("selected"),
+      item.classList.contains("selected")
     );
 
     console.log(
       "Current selected index:",
       selectedIndex,
       "Total suggestions:",
-      suggestions.length,
+      suggestions.length
     );
 
     switch (event.key) {
@@ -675,7 +472,7 @@ class SlackEmojiRenderer {
     const target = event.target as HTMLElement;
 
     // 編集可能な要素にフォーカスが入った場合
-    if (this.editModeDetector.isEditableElement(target)) {
+    if ((window as any).EditModeUtils.isEditableElement(target)) {
       console.log("Focus in editable element:", target);
       this.revertEmojisInElement(target);
     }
@@ -685,7 +482,7 @@ class SlackEmojiRenderer {
     const target = event.target as HTMLElement;
 
     // 編集可能な要素からフォーカスが外れた場合
-    if (this.editModeDetector.isEditableElement(target)) {
+    if ((window as any).EditModeUtils.isEditableElement(target)) {
       console.log("Focus out editable element:", target);
       // 少し遅延させてから絵文字化を実行（他の処理を待つため）
       setTimeout(() => {
@@ -713,11 +510,13 @@ class SlackEmojiRenderer {
     const target = event.target as HTMLElement;
 
     // GitHub等の編集ボタンを検出
-    if (this.editModeDetector.isEditButton(target)) {
+    if ((window as any).EditModeUtils.isEditButton(target)) {
       console.log("Edit button clicked:", target);
 
       // 編集対象のコンテンツ要素を探す
-      const contentElement = this.editModeDetector.findEditableContent(target);
+      const contentElement = (window as any).EditModeUtils.findEditableContent(
+        target
+      );
       if (contentElement) {
         console.log("Found editable content:", contentElement);
         // 即座に絵文字を元のテキストに戻す
@@ -725,8 +524,9 @@ class SlackEmojiRenderer {
 
         // 編集モードが表示されるまで少し待ってから再度処理
         setTimeout(() => {
-          const editArea =
-            this.editModeDetector.findActiveEditArea(contentElement);
+          const editArea = (window as any).EditModeUtils.findActiveEditArea(
+            contentElement
+          );
           if (editArea) {
             this.revertEmojisInElement(editArea);
           }
@@ -737,14 +537,20 @@ class SlackEmojiRenderer {
 
   private showSuggestions(
     searchTerm: string,
-    inputElement: HTMLInputElement | HTMLTextAreaElement,
+    inputElement: HTMLInputElement | HTMLTextAreaElement
   ): void {
     const allEmojis = Object.keys(this.emojiData);
+    // エイリアスも含めて有効な絵文字のみをフィルタ
+    const validEmojis = allEmojis.filter((emojiName) => {
+      const url = getEmojiUrl(emojiName, this.emojiData);
+      return url !== null;
+    });
+
     console.log(
-      `Searching for: "${searchTerm}" (${allEmojis.length} total emojis)`,
+      `Searching for: "${searchTerm}" (${validEmojis.length} valid emojis out of ${allEmojis.length} total)`
     );
 
-    const scoredEmojis = fuzzySearch(searchTerm, allEmojis, 10);
+    const scoredEmojis = fuzzySearch(searchTerm, validEmojis, 10);
 
     if (scoredEmojis.length === 0) {
       this.removeSuggestionBox();
@@ -754,14 +560,14 @@ class SlackEmojiRenderer {
     const matchingEmojis = scoredEmojis.map((item) => item.name);
     console.log(
       "Top suggestions:",
-      scoredEmojis.slice(0, 5).map((item) => `${item.name}(${item.score})`),
+      scoredEmojis.slice(0, 5).map((item) => `${item.name}(${item.score})`)
     );
     this.createSuggestionBox(matchingEmojis, inputElement);
   }
 
   private createSuggestionBox(
     emojis: string[],
-    inputElement: HTMLInputElement | HTMLTextAreaElement,
+    inputElement: HTMLInputElement | HTMLTextAreaElement
   ): void {
     this.removeSuggestionBox();
 
@@ -775,7 +581,10 @@ class SlackEmojiRenderer {
       if (index === 0) item.classList.add("selected");
 
       const img = document.createElement("img");
-      img.src = this.emojiData[emojiName];
+      const emojiUrl = getEmojiUrl(emojiName, this.emojiData);
+      if (emojiUrl) {
+        img.src = emojiUrl;
+      }
       img.alt = `:${emojiName}:`;
       img.className = "emoji-suggestion-icon";
 
@@ -814,7 +623,7 @@ class SlackEmojiRenderer {
   }
 
   private positionSuggestionBox(
-    inputElement: HTMLInputElement | HTMLTextAreaElement,
+    inputElement: HTMLInputElement | HTMLTextAreaElement
   ): void {
     if (!this.suggestionBox) return;
 
@@ -828,7 +637,7 @@ class SlackEmojiRenderer {
   }
 
   private getCaretPosition(
-    inputElement: HTMLInputElement | HTMLTextAreaElement,
+    inputElement: HTMLInputElement | HTMLTextAreaElement
   ): { left: number; top: number } {
     const value = inputElement.value;
     const caretIndex = inputElement.selectionStart || 0;
@@ -852,7 +661,7 @@ class SlackEmojiRenderer {
     if (!this.suggestionBox) return;
 
     const suggestions = this.suggestionBox.querySelectorAll(
-      ".emoji-suggestion-item",
+      ".emoji-suggestion-item"
     );
     suggestions.forEach((item, i) => {
       item.classList.toggle("selected", i === index);
@@ -890,7 +699,7 @@ class SlackEmojiRenderer {
     if (emojiMatch) {
       const newBeforeCaret = beforeCaret.substring(
         0,
-        beforeCaret.length - emojiMatch[0].length,
+        beforeCaret.length - emojiMatch[0].length
       );
       const newValue = newBeforeCaret + emojiName + " " + afterCaret;
 
@@ -910,7 +719,7 @@ class SlackEmojiRenderer {
   }
 
   private replaceEmojisInInput(
-    inputElement: HTMLInputElement | HTMLTextAreaElement,
+    inputElement: HTMLInputElement | HTMLTextAreaElement
   ): void {
     // テキスト入力フィールドでは絵文字置換を行わない
     // サジェスト機能で選択されたもののみ処理する
@@ -950,7 +759,7 @@ chrome.runtime.onMessage.addListener(
       slackEmojiRenderer.toggleExtension(request.enabled);
       sendResponse({ success: true });
     }
-  },
+  }
 );
 
 console.log("Slack Emoji Renderer loaded");

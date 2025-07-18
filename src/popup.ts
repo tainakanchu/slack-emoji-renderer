@@ -25,6 +25,7 @@ class PopupManager {
   private slackTokenInput!: HTMLInputElement;
   private saveSettingsBtn!: HTMLButtonElement;
   private fetchEmojisBtn!: HTMLButtonElement;
+  private openEmojiListBtn!: HTMLButtonElement;
   private statusDiv!: HTMLDivElement;
   private emojiCountDiv!: HTMLDivElement;
   private extensionToggle!: HTMLDivElement;
@@ -45,6 +46,9 @@ class PopupManager {
     ) as HTMLButtonElement;
     this.fetchEmojisBtn = document.getElementById(
       "fetchEmojis",
+    ) as HTMLButtonElement;
+    this.openEmojiListBtn = document.getElementById(
+      "openEmojiList",
     ) as HTMLButtonElement;
     this.statusDiv = document.getElementById("status") as HTMLDivElement;
     this.emojiCountDiv = document.getElementById(
@@ -89,6 +93,7 @@ class PopupManager {
     );
     this.saveSettingsBtn.addEventListener("click", () => this.saveSettings());
     this.fetchEmojisBtn.addEventListener("click", () => this.fetchEmojis());
+    this.openEmojiListBtn.addEventListener("click", () => this.openEmojiList());
   }
 
   private toggleExtension(): void {
@@ -181,6 +186,12 @@ class PopupManager {
     } finally {
       this.fetchEmojisBtn.disabled = false;
     }
+  }
+
+  private openEmojiList(): void {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL("emoji-list.html"),
+    });
   }
 
   private showStatus(message: string, type: "success" | "error"): void {

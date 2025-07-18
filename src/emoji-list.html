@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slack Emoji List</title>
+    <link rel="stylesheet" href="emoji-list.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Slack 絵文字一覧</h1>
+
+      <div class="search-section">
+        <input type="text" id="searchInput" placeholder="絵文字を検索..." />
+        <div class="stats">
+          <span id="emojiCount">0</span> 個の絵文字
+          <span id="filteredCount" style="display: none"
+            >（<span id="filteredCountNum">0</span> 個表示中）</span
+          >
+        </div>
+      </div>
+
+      <div class="emoji-grid" id="emojiGrid">
+        <div class="loading">絵文字データを読み込み中...</div>
+      </div>
+    </div>
+
+    <script src="emoji-list.js"></script>
+  </body>
+</html>

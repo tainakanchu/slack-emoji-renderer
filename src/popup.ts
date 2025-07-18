@@ -123,7 +123,7 @@ class PopupManager {
       this.showStatus("✅ 設定を保存しました", "success");
       this.saveSettingsBtn.disabled = false;
       this.saveSettingsBtn.textContent = "設定を保存";
-      
+
       // 保存後に「絵文字を取得」ボタンを有効化
       this.fetchEmojisBtn.disabled = false;
     });

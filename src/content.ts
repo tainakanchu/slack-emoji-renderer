@@ -11,9 +11,91 @@ interface ContentEmojiStorageData {
 }
 
 interface ContentChromeMessage {
-  action: 'updateEmojiData' | 'toggleExtension' | 'fetchEmojis';
+  action: "updateEmojiData" | "toggleExtension" | "fetchEmojis";
   emojiData?: ContentEmojiData;
   enabled?: boolean;
+}
+
+// ファジーマッチング用の型定義
+interface MatchResult {
+  name: string;
+  score: number;
+}
+
+// ファジーマッチング関数
+function fuzzySearch(
+  searchTerm: string,
+  candidates: string[],
+  maxResults: number = 10,
+): MatchResult[] {
+  const searchLower = searchTerm.toLowerCase();
+
+  // 各候補に対してスコアを計算
+  const scoredResults = candidates
+    .map((name) => {
+      const nameLower = name.toLowerCase();
+      let score = 0;
+
+      // 1. 完全一致（最高スコア）
+      if (nameLower === searchLower) {
+        score = 1000;
+      }
+      // 2. 前方一致（高スコア）
+      else if (nameLower.startsWith(searchLower)) {
+        score = 900 - searchLower.length;
+      }
+      // 3. 部分一致（中スコア）
+      else if (nameLower.includes(searchLower)) {
+        score = 800 - nameLower.indexOf(searchLower) * 10;
+      }
+      // 4. ファジーマッチング（低〜中スコア）
+      else {
+        const fuzzyScore = calculateFuzzyScore(searchLower, nameLower);
+        if (fuzzyScore > 0.3) {
+          score = Math.floor(fuzzyScore * 700);
+        }
+      }
+
+      return { name, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxResults);
+
+  return scoredResults;
+}
+
+function calculateFuzzyScore(search: string, target: string): number {
+  if (search.length === 0) return 0;
+  if (search.length > target.length) return 0;
+
+  let searchIndex = 0;
+  let targetIndex = 0;
+  let matches = 0;
+  let consecutiveMatches = 0;
+  let maxConsecutive = 0;
+
+  while (searchIndex < search.length && targetIndex < target.length) {
+    if (search[searchIndex] === target[targetIndex]) {
+      matches++;
+      consecutiveMatches++;
+      maxConsecutive = Math.max(maxConsecutive, consecutiveMatches);
+      searchIndex++;
+    } else {
+      consecutiveMatches = 0;
+    }
+    targetIndex++;
+  }
+
+  if (searchIndex < search.length) {
+    return 0;
+  }
+
+  const matchRatio = matches / search.length;
+  const consecutiveBonus = (maxConsecutive / search.length) * 0.3;
+  const lengthPenalty = ((target.length - search.length) / target.length) * 0.2;
+
+  return Math.max(0, matchRatio + consecutiveBonus - lengthPenalty);
 }
 
 class SlackEmojiRenderer {
@@ -30,17 +112,21 @@ class SlackEmojiRenderer {
   }
 
   private async init(): Promise<void> {
-    console.log('SlackEmojiRenderer initializing...');
+    console.log("SlackEmojiRenderer initializing...");
     await this.loadSettings();
     await this.loadEmojiData();
-    console.log('Loaded emoji data:', Object.keys(this.emojiData).length, 'emojis');
-    console.log('Extension enabled:', this.isEnabled);
+    console.log(
+      "Loaded emoji data:",
+      Object.keys(this.emojiData).length,
+      "emojis",
+    );
+    console.log("Extension enabled:", this.isEnabled);
 
     if (this.isEnabled) {
       this.startObserving();
       this.setupInputListeners();
     }
-    console.log('SlackEmojiRenderer initialization complete');
+    console.log("SlackEmojiRenderer initialization complete");
   }
 
   private async loadSettings(): Promise<void> {
@@ -55,10 +141,13 @@ class SlackEmojiRenderer {
 
   private async loadEmojiData(): Promise<void> {
     return new Promise<void>((resolve) => {
-      chrome.storage.local.get(["emojiData"], (result: ContentEmojiStorageData) => {
-        this.emojiData = result.emojiData || {};
-        resolve();
-      });
+      chrome.storage.local.get(
+        ["emojiData"],
+        (result: ContentEmojiStorageData) => {
+          this.emojiData = result.emojiData || {};
+          resolve();
+        },
+      );
     });
   }
 
@@ -113,8 +202,10 @@ class SlackEmojiRenderer {
     // サジェストボックス内の要素は処理しない
     if (node.nodeType === Node.ELEMENT_NODE) {
       const element = node as Element;
-      if (element.closest('.slack-emoji-suggestions') || 
-          element.hasAttribute('data-emoji-exclude')) {
+      if (
+        element.closest(".slack-emoji-suggestions") ||
+        element.hasAttribute("data-emoji-exclude")
+      ) {
         return;
       }
     }
@@ -146,7 +237,7 @@ class SlackEmojiRenderer {
     // サジェストボックス内のテキストは置換しない
     let parent = textNode.parentElement;
     while (parent) {
-      if (parent.classList.contains('slack-emoji-suggestions')) {
+      if (parent.classList.contains("slack-emoji-suggestions")) {
         return;
       }
       parent = parent.parentElement;
@@ -207,42 +298,55 @@ class SlackEmojiRenderer {
   }
 
   private setupInputListeners(): void {
-    console.log('Setting up input listeners');
-    document.addEventListener('input', this.handleInput.bind(this));
-    document.addEventListener('keydown', this.handleKeydown.bind(this));
-    document.addEventListener('click', this.handleClick.bind(this));
-    console.log('Input listeners setup complete');
+    console.log("Setting up input listeners");
+    document.addEventListener("input", this.handleInput.bind(this));
+    document.addEventListener("keydown", this.handleKeydown.bind(this));
+    document.addEventListener("click", this.handleClick.bind(this));
+    console.log("Input listeners setup complete");
   }
 
   private handleInput(event: Event): void {
-    console.log('Input event received:', event.target);
+    console.log("Input event received:", event.target);
     if (!this.isEnabled) {
-      console.log('Extension disabled, skipping');
+      console.log("Extension disabled, skipping");
       return;
     }
-    
+
     const target = event.target as HTMLInputElement | HTMLTextAreaElement;
-    if (!target || (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA')) {
+    if (
+      !target ||
+      (target.tagName !== "INPUT" && target.tagName !== "TEXTAREA")
+    ) {
       return;
     }
 
     this.currentInput = target;
-    
+
     // キャレット位置を更新する際にtimeoutを使用
     setTimeout(() => {
       this.currentCaretPosition = target.selectionStart || 0;
-      
+
       const value = target.value;
       const beforeCaret = value.substring(0, this.currentCaretPosition);
-      
-      console.log('Input event - value:', value, 'caret:', this.currentCaretPosition);
-      
+
+      console.log(
+        "Input event - value:",
+        value,
+        "caret:",
+        this.currentCaretPosition,
+      );
+
       // :で始まる未完成の絵文字パターンを検索
       const emojiMatch = beforeCaret.match(/:([a-zA-Z0-9_+-]*)$/);
-      
+
       if (emojiMatch) {
         const searchTerm = emojiMatch[1];
-        console.log('Found emoji pattern:', emojiMatch[0], 'search term:', searchTerm);
+        console.log(
+          "Found emoji pattern:",
+          emojiMatch[0],
+          "search term:",
+          searchTerm,
+        );
         this.showSuggestions(searchTerm, target);
       } else {
         this.removeSuggestionBox();
@@ -254,34 +358,40 @@ class SlackEmojiRenderer {
   }
 
   private handleKeydown(event: KeyboardEvent): void {
-    if (!this.suggestionBox || !this.suggestionBox.style.display || this.suggestionBox.style.display === 'none') {
+    if (
+      !this.suggestionBox ||
+      !this.suggestionBox.style.display ||
+      this.suggestionBox.style.display === "none"
+    ) {
       return;
     }
 
-    const suggestions = this.suggestionBox.querySelectorAll('.emoji-suggestion-item');
-    let selectedIndex = Array.from(suggestions).findIndex(item => 
-      item.classList.contains('selected')
+    const suggestions = this.suggestionBox.querySelectorAll(
+      ".emoji-suggestion-item",
+    );
+    let selectedIndex = Array.from(suggestions).findIndex((item) =>
+      item.classList.contains("selected"),
     );
 
     switch (event.key) {
-      case 'ArrowDown':
+      case "ArrowDown":
         event.preventDefault();
         selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
         this.updateSelectedSuggestion(selectedIndex);
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         event.preventDefault();
         selectedIndex = Math.max(selectedIndex - 1, 0);
         this.updateSelectedSuggestion(selectedIndex);
         break;
-      case 'Enter':
-      case 'Tab':
+      case "Enter":
+      case "Tab":
         event.preventDefault();
         if (selectedIndex >= 0 && suggestions[selectedIndex]) {
           this.selectSuggestion(suggestions[selectedIndex] as HTMLDivElement);
         }
         break;
-      case 'Escape':
+      case "Escape":
         this.removeSuggestionBox();
         break;
     }
@@ -289,80 +399,100 @@ class SlackEmojiRenderer {
 
   private handleClick(event: Event): void {
     const target = event.target as HTMLElement;
-    
+
     // サジェストアイテムがクリックされた場合
     if (this.suggestionBox && this.suggestionBox.contains(target)) {
       event.preventDefault();
       event.stopPropagation();
-      
+
       // クリックされた要素またはその親要素のサジェストアイテムを探す
       let suggestionItem = target;
-      while (suggestionItem && !suggestionItem.classList.contains('emoji-suggestion-item')) {
+      while (
+        suggestionItem &&
+        !suggestionItem.classList.contains("emoji-suggestion-item")
+      ) {
         suggestionItem = suggestionItem.parentElement as HTMLElement;
       }
-      
-      if (suggestionItem && suggestionItem.classList.contains('emoji-suggestion-item')) {
+
+      if (
+        suggestionItem &&
+        suggestionItem.classList.contains("emoji-suggestion-item")
+      ) {
         this.selectSuggestion(suggestionItem as HTMLDivElement);
       }
       return;
     }
-    
+
     // サジェストボックス外がクリックされた場合は閉じる
     if (this.suggestionBox) {
       this.removeSuggestionBox();
     }
   }
 
-  private showSuggestions(searchTerm: string, inputElement: HTMLInputElement | HTMLTextAreaElement): void {
-    const matchingEmojis = Object.keys(this.emojiData)
-      .filter(name => name.toLowerCase().includes(searchTerm.toLowerCase()))
-      .slice(0, 10); // 最大10個まで表示
+  private showSuggestions(
+    searchTerm: string,
+    inputElement: HTMLInputElement | HTMLTextAreaElement,
+  ): void {
+    const allEmojis = Object.keys(this.emojiData);
+    console.log(
+      `Searching for: "${searchTerm}" (${allEmojis.length} total emojis)`,
+    );
 
-    if (matchingEmojis.length === 0) {
+    const scoredEmojis = fuzzySearch(searchTerm, allEmojis, 10);
+
+    if (scoredEmojis.length === 0) {
       this.removeSuggestionBox();
       return;
     }
 
+    const matchingEmojis = scoredEmojis.map((item) => item.name);
+    console.log(
+      "Top suggestions:",
+      scoredEmojis.slice(0, 5).map((item) => `${item.name}(${item.score})`),
+    );
     this.createSuggestionBox(matchingEmojis, inputElement);
   }
 
-  private createSuggestionBox(emojis: string[], inputElement: HTMLInputElement | HTMLTextAreaElement): void {
+  private createSuggestionBox(
+    emojis: string[],
+    inputElement: HTMLInputElement | HTMLTextAreaElement,
+  ): void {
     this.removeSuggestionBox();
 
-    this.suggestionBox = document.createElement('div');
-    this.suggestionBox.className = 'slack-emoji-suggestions';
-    this.suggestionBox.setAttribute('data-emoji-exclude', 'true');
-    
+    this.suggestionBox = document.createElement("div");
+    this.suggestionBox.className = "slack-emoji-suggestions";
+    this.suggestionBox.setAttribute("data-emoji-exclude", "true");
+
     emojis.forEach((emojiName, index) => {
-      const item = document.createElement('div');
-      item.className = 'emoji-suggestion-item';
-      if (index === 0) item.classList.add('selected');
-      
-      const img = document.createElement('img');
+      const item = document.createElement("div");
+      item.className = "emoji-suggestion-item";
+      if (index === 0) item.classList.add("selected");
+
+      const img = document.createElement("img");
       img.src = this.emojiData[emojiName];
       img.alt = `:${emojiName}:`;
-      img.className = 'emoji-suggestion-icon';
-      
-      const name = document.createElement('span');
+      img.className = "emoji-suggestion-icon";
+
+      const name = document.createElement("span");
       name.textContent = `:${emojiName}:`;
-      name.className = 'emoji-suggestion-name';
-      
+      name.className = "emoji-suggestion-name";
+
       item.appendChild(img);
       item.appendChild(name);
-      
+
       // マウスダウンイベントでも処理（クリックより確実）
-      item.addEventListener('mousedown', (e) => {
+      item.addEventListener("mousedown", (e) => {
         e.preventDefault();
         e.stopPropagation();
         this.selectSuggestion(item);
       });
-      
-      item.addEventListener('click', (e) => {
+
+      item.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         this.selectSuggestion(item);
       });
-      
+
       this.suggestionBox!.appendChild(item);
     });
 
@@ -370,94 +500,105 @@ class SlackEmojiRenderer {
     document.body.appendChild(this.suggestionBox);
   }
 
-  private positionSuggestionBox(inputElement: HTMLInputElement | HTMLTextAreaElement): void {
+  private positionSuggestionBox(
+    inputElement: HTMLInputElement | HTMLTextAreaElement,
+  ): void {
     if (!this.suggestionBox) return;
 
     const rect = inputElement.getBoundingClientRect();
     const caretPosition = this.getCaretPosition(inputElement);
-    
-    this.suggestionBox.style.position = 'fixed';
+
+    this.suggestionBox.style.position = "fixed";
     this.suggestionBox.style.left = `${rect.left + caretPosition.left}px`;
     this.suggestionBox.style.top = `${rect.top + caretPosition.top + 20}px`;
-    this.suggestionBox.style.zIndex = '10000';
+    this.suggestionBox.style.zIndex = "10000";
   }
 
-  private getCaretPosition(inputElement: HTMLInputElement | HTMLTextAreaElement): { left: number; top: number } {
+  private getCaretPosition(
+    inputElement: HTMLInputElement | HTMLTextAreaElement,
+  ): { left: number; top: number } {
     const value = inputElement.value;
     const caretIndex = inputElement.selectionStart || 0;
-    
+
     // 簡易的なキャレット位置計算（フォントサイズに基づく）
     const style = window.getComputedStyle(inputElement);
     const fontSize = parseInt(style.fontSize) || 14;
     const lineHeight = parseInt(style.lineHeight) || fontSize * 1.2;
-    
+
     const beforeCaret = value.substring(0, caretIndex);
-    const lines = beforeCaret.split('\n');
+    const lines = beforeCaret.split("\n");
     const currentLine = lines[lines.length - 1];
-    
+
     return {
       left: currentLine.length * (fontSize * 0.6), // 概算
-      top: (lines.length - 1) * lineHeight
+      top: (lines.length - 1) * lineHeight,
     };
   }
 
   private updateSelectedSuggestion(index: number): void {
     if (!this.suggestionBox) return;
-    
-    const suggestions = this.suggestionBox.querySelectorAll('.emoji-suggestion-item');
+
+    const suggestions = this.suggestionBox.querySelectorAll(
+      ".emoji-suggestion-item",
+    );
     suggestions.forEach((item, i) => {
-      item.classList.toggle('selected', i === index);
+      item.classList.toggle("selected", i === index);
     });
   }
 
   private selectSuggestion(item: HTMLDivElement): void {
-    console.log('selectSuggestion called', item);
-    
+    console.log("selectSuggestion called", item);
+
     if (!this.currentInput) {
-      console.log('No current input');
+      console.log("No current input");
       return;
     }
-    
-    const emojiName = item.querySelector('.emoji-suggestion-name')?.textContent;
-    console.log('Found emoji name:', emojiName);
-    
+
+    const emojiName = item.querySelector(".emoji-suggestion-name")?.textContent;
+    console.log("Found emoji name:", emojiName);
+
     if (!emojiName) {
-      console.log('No emoji name found');
+      console.log("No emoji name found");
       return;
     }
-    
+
     const value = this.currentInput.value;
     const beforeCaret = value.substring(0, this.currentCaretPosition);
     const afterCaret = value.substring(this.currentCaretPosition);
-    
-    console.log('Current value:', value);
-    console.log('Before caret:', beforeCaret);
-    console.log('Caret position:', this.currentCaretPosition);
-    
+
+    console.log("Current value:", value);
+    console.log("Before caret:", beforeCaret);
+    console.log("Caret position:", this.currentCaretPosition);
+
     // :で始まる未完成部分を削除
     const emojiMatch = beforeCaret.match(/:([a-zA-Z0-9_+-]*)$/);
-    console.log('Emoji match:', emojiMatch);
-    
+    console.log("Emoji match:", emojiMatch);
+
     if (emojiMatch) {
-      const newBeforeCaret = beforeCaret.substring(0, beforeCaret.length - emojiMatch[0].length);
-      const newValue = newBeforeCaret + emojiName + ' ' + afterCaret;
-      
-      console.log('New value:', newValue);
-      
+      const newBeforeCaret = beforeCaret.substring(
+        0,
+        beforeCaret.length - emojiMatch[0].length,
+      );
+      const newValue = newBeforeCaret + emojiName + " " + afterCaret;
+
+      console.log("New value:", newValue);
+
       this.currentInput.value = newValue;
       this.currentInput.focus();
-      
+
       const newCaretPosition = newBeforeCaret.length + emojiName.length + 1;
       this.currentInput.setSelectionRange(newCaretPosition, newCaretPosition);
-      
+
       // inputイベントを発火させて他のリスナーに通知
-      this.currentInput.dispatchEvent(new Event('input', { bubbles: true }));
+      this.currentInput.dispatchEvent(new Event("input", { bubbles: true }));
     }
-    
+
     this.removeSuggestionBox();
   }
 
-  private replaceEmojisInInput(inputElement: HTMLInputElement | HTMLTextAreaElement): void {
+  private replaceEmojisInInput(
+    inputElement: HTMLInputElement | HTMLTextAreaElement,
+  ): void {
     // テキスト入力フィールドでは絵文字置換を行わない
     // サジェスト機能で選択されたもののみ処理する
     return;

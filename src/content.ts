@@ -250,12 +250,16 @@ class SlackEmojiRenderer {
     if (matches) {
       let newHtml = text;
 
-      matches.forEach((match) => {
+      // 重複を除去してユニークな絵文字のみ処理
+      const uniqueMatches = [...new Set(matches)];
+
+      uniqueMatches.forEach((match) => {
         const emojiName = match.slice(1, -1);
         if (this.emojiData[emojiName]) {
           const emojiUrl = this.emojiData[emojiName];
           const imgTag = `<img src="${emojiUrl}" alt="${match}" title="${match}" class="slack-emoji-renderer" style="width: 1.2em; height: 1.2em; vertical-align: middle; margin: 0 0.1em;">`;
-          newHtml = newHtml.replace(match, imgTag);
+          // split/joinを使用して全ての出現を置換
+          newHtml = newHtml.split(match).join(imgTag);
         }
       });
 

@@ -1,0 +1,27 @@
+{
+  "name": "slack-emoji-renderer",
+  "version": "1.0.0",
+  "description": "Slackワークスペースの絵文字を取得し、ブラウザ上で :emoji: 文字列を絵文字に置換するChrome拡張機能",
+  "main": "dist/background.js",
+  "scripts": {
+    "build": "tsc && cp src/*.html dist/ && cp src/*.css dist/ && cp src/manifest.json dist/ && cp src/*.png dist/",
+    "package": "yarn build && cd dist && zip -r ../slack-emoji-renderer.zip . -x node_modules/\\* .git/\\* *.zip",
+    "format": "prettier --write src/**/*.{ts,js,json,html,css}",
+    "type-check": "tsc --noEmit",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "chrome-extension",
+    "slack",
+    "emoji",
+    "browser"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/chrome": "^0.0.254",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  }
+}

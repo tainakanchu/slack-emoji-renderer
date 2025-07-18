@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Slack Emoji Renderer",
+  "version": "1.0",
+  "description": "Slackワークスペースの絵文字を取得し、ブラウザ上で :emoji: 文字列を絵文字に置換する",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": ["https://slack.com/*", "https://*.slack.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Slack Emoji Renderer"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

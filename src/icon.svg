@@ -1,0 +1,24 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#4A154B" stroke="#ffffff" stroke-width="4"/>
+  
+  <!-- Emoji face -->
+  <circle cx="64" cy="64" r="45" fill="#FFD700"/>
+  
+  <!-- Eyes -->
+  <circle cx="50" cy="55" r="4" fill="#000000"/>
+  <circle cx="78" cy="55" r="4" fill="#000000"/>
+  
+  <!-- Smile -->
+  <path d="M 45 75 Q 64 90 83 75" stroke="#000000" stroke-width="3" fill="none" stroke-linecap="round"/>
+  
+  <!-- Slack-style colon indicators -->
+  <text x="25" y="40" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#ffffff">:</text>
+  <text x="95" y="40" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#ffffff">:</text>
+  
+  <!-- Small sparkles -->
+  <circle cx="30" cy="85" r="2" fill="#ffffff" opacity="0.8"/>
+  <circle cx="98" cy="85" r="2" fill="#ffffff" opacity="0.8"/>
+  <circle cx="35" cy="25" r="1.5" fill="#ffffff" opacity="0.6"/>
+  <circle cx="93" cy="25" r="1.5" fill="#ffffff" opacity="0.6"/>
+</svg>

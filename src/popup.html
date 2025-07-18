@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slack Emoji Renderer</title>
+    <style>
+      body {
+        width: 300px;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+      }
+      .container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+      label {
+        font-weight: bold;
+        font-size: 14px;
+      }
+      input {
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      button {
+        padding: 10px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+      .status {
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+      .status.success {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .status.error {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+      .toggle-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .toggle {
+        position: relative;
+        width: 40px;
+        height: 20px;
+        background-color: #ccc;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .toggle.active {
+        background-color: #4caf50;
+      }
+      .toggle-ball {
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        background-color: white;
+        border-radius: 50%;
+        top: 1px;
+        left: 1px;
+        transition: transform 0.3s;
+      }
+      .toggle.active .toggle-ball {
+        transform: translateX(20px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Slack Emoji Renderer</h2>
+
+      <div class="toggle-container">
+        <span>拡張機能</span>
+        <div class="toggle" id="extensionToggle">
+          <div class="toggle-ball"></div>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label for="slackToken">Slack API トークン:</label>
+        <input type="password" id="slackToken" placeholder="xoxb-..." />
+      </div>
+
+      <button id="saveSettings">設定を保存</button>
+      <button id="fetchEmojis">絵文字を取得</button>
+
+      <div id="status"></div>
+
+      <div id="emojiCount"></div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

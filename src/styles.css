@@ -1,0 +1,71 @@
+.slack-emoji-renderer {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: middle;
+  margin: 0 0.1em;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+.slack-emoji-renderer:hover {
+  transform: scale(1.2);
+  transition: transform 0.2s ease;
+}
+
+/* Emoji suggestion box styles */
+.slack-emoji-suggestions {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-size: 14px;
+  z-index: 10000;
+}
+
+.emoji-suggestion-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
+}
+
+.emoji-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.emoji-suggestion-item:hover,
+.emoji-suggestion-item.selected {
+  background-color: #f0f8ff;
+}
+
+.emoji-suggestion-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.emoji-suggestion-name {
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.emoji-suggestion-item.selected .emoji-suggestion-name {
+  color: #0066cc;
+  font-weight: 500;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, sans-serif;
+}

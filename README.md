@@ -1,109 +1,121 @@
-# Slack Emoji Renderer
+# Slack Emoji Renderer :sparkles:
 
-Slackワークスペースの絵文字を取得し、ブラウザ上で `:emoji:` 文字列を絵文字に置換するChrome拡張機能です。
+> :wave: Slackの絵文字をどこでも使おう！ブラウザ上で `:emoji:` を魔法のように絵文字に変換するChrome拡張機能です :magic_wand:
 
-## 機能
+## :rocket: なにこれ？
 
-- Slack APIから絵文字データを取得
-- ウェブページ内の `:emoji:` パターンを検出し、対応する絵文字画像に置換
-- リアルタイム入力サジェスト機能（`:` を入力すると候補が表示）
-- 高度なファジーマッチング検索（`:tbnugk:` で `:tabunugoku:` を検索可能）
-- キーボードナビゲーション（上下矢印で選択、Enterで確定）
-- ダークモード対応
-- 拡張機能のON/OFF切り替え
-- 設定画面でSlack APIトークンを管理
+「あ〜、この投稿に `:iikanji:` つけたいのに、ここSlackじゃないから使えない...」
 
-## インストール方法
+そんな悩みを解決！あなたのSlackワークスペースの絵文字を、**どんなWebサイトでも**使えるようにする魔法の拡張機能です :star2:
 
-### 開発版のインストール
+## :tada: できること
 
-1. このリポジトリをクローンまたはダウンロード
-2. 依存関係をインストール
+- :inbox_tray: **Slack APIから絵文字データを取得** - あなたのワークスペースの絵文字をまるごとお持ち帰り
+- :arrows_counterclockwise: **瞬間絵文字変換** - `:emoji:` パターンを見つけて、サクッと絵文字画像に置換
+- :mag: **超スマートサジェスト** - `:` を入力した瞬間、候補がポップアップ！まるでSlackにいるみたい
+- :brain: **天才的ファジー検索** - `:tbnugk:` って打っても `:tabunugoku:` を見つけちゃう賢さ
+- :keyboard: **キーボード忍者モード** - 矢印キーで選択、Enterで確定。マウス？知らない子ですね
+- :new_moon: **ダークモード完全対応** - 目に優しく、夜更かし開発者の味方
+- :electric_plug: **ワンクリックON/OFF** - 邪魔な時はサッと無効化
+- :gear: **簡単設定** - APIトークンの管理もお任せあれ
+
+## :wrench: インストール方法
+
+### :construction: 開発版インストール（冒険者向け）
+
+1. :octocat: このリポジトリをクローンまたはダウンロード
+2. :package: 依存関係をインストール
    ```bash
    yarn install
    ```
-3. プロジェクトをビルド
+3. :hammer: プロジェクトをビルド
    ```bash
    yarn build
    ```
-4. Chrome拡張機能の管理画面を開く（`chrome://extensions/`）
-5. 「デベロッパー モード」を有効にする
-6. 「パッケージ化されていない拡張機能を読み込む」をクリック
-7. ビルドされた `dist` フォルダを選択
+4. :globe_with_meridians: Chrome拡張機能の管理画面を開く（`chrome://extensions/`）
+5. :construction_worker: 「デベロッパー モード」を有効にする
+6. :file_folder: 「パッケージ化されていない拡張機能を読み込む」をクリック
+7. :dart: ビルドされた `dist` フォルダを選択
 
-## 使用方法
+## :book: 使い方ガイド
 
-1. Slack API トークンを取得
-   - Slack APIの[Your Apps](https://api.slack.com/apps)ページにアクセス
-   - 新しいアプリを作成、または既存のアプリを選択
-   - 「OAuth & Permissions」セクションで`emoji:read`スコープを追加
-   - Bot User OAuth Tokenを取得
+### :key: ステップ1: Slack API トークンをゲット！
 
-2. 拡張機能を設定
-   - 拡張機能のアイコンをクリック
-   - 取得したSlack APIトークンを入力
-   - 「設定を保存」をクリック
-   - 「絵文字を取得」をクリック
+1. :link: [Slack API - Your Apps](https://api.slack.com/apps)ページに向かう
+2. :new: 新しいアプリを作成、または既存のアプリを選択
+3. :lock: 「OAuth & Permissions」セクションで`emoji:read`スコープを追加
+4. :ticket: Bot User OAuth Tokenをコピー
 
-3. 使用開始
-   - 任意のウェブサイトで `:emoji_name:` と入力
-   - 対応する絵文字がある場合、自動的に絵文字画像に置換されます
-   - テキスト入力中に `:` を入力すると絵文字のサジェストが表示されます
-   - 上下矢印キーで選択、Enterキーで確定できます
+### :gear: ステップ2: 拡張機能をセットアップ
 
-## 開発
+1. :point_right: 拡張機能のアイコンをクリック
+2. :memo: 取得したSlack APIトークンを入力
+3. :floppy_disk: 「設定を保存」をクリック
+4. :inbox_tray: 「絵文字を取得」をクリック
 
-### 必要な環境
+### :party: ステップ3: 絵文字ライフを楽しもう！
 
-- Node.js 16+
-- Yarn
+- :computer: 任意のWebサイトで `:emoji_name:` と入力
+- :zap: 対応する絵文字がある場合、魔法のように絵文字画像に変身！
+- :bulb: テキスト入力中に `:` を入力するとサジェストが出現
+- :video_game: 上下矢印キーで選択、Enterキーで確定！
 
-### セットアップ
+> :information_source: **プロチップ**: `:iika` と入力するだけで `:iikanji:` が候補に出てくるよ！
+
+## :technologist: 開発者向け情報
+
+### :computer: 必要な環境
+
+- Node.js 16+ :green_circle:
+- Yarn :yarn:
+
+### :sparkles: 開発コマンド集
 
 ```bash
+# :package: セットアップ
 yarn install
-```
 
-### ビルド
-
-```bash
+# :hammer: ビルド
 yarn build
-```
 
-### 型チェック
-
-```bash
+# :mag: 型チェック
 yarn type-check
-```
 
-### フォーマット
-
-```bash
+# :art: コード整形
 yarn format
+
+# :eyes: リアルタイム開発
+yarn dev  # ファイル変更を監視
 ```
 
-### リアルタイム開発
+### :fire: 開発の流れ
 
-1. `yarn build` でビルド後、Chromeで拡張機能をリロード
-2. または `yarn build --watch` でファイル変更を監視（tscの`--watch`オプション）
+1. :building_construction: `yarn build` でビルド後、Chromeで拡張機能をリロード
+2. :watch: または `yarn dev` でファイル変更を監視して爆速開発！
 
-## 技術スタック
+## :toolbox: 技術スタック
 
-- TypeScript
-- Chrome Extensions API (Manifest V3)
-- Slack API
-- CSS (ダークモード対応)
-- MutationObserver (DOM変更監視)
-- ファジーマッチングアルゴリズム
+- :blue_book: **TypeScript** - 型安全で快適な開発体験
+- :chrome: **Chrome Extensions API (Manifest V3)** - 最新の拡張機能仕様
+- :slack: **Slack API** - 絵文字データの取得
+- :art: **CSS** - ダークモード完全対応の美しいUI
+- :eyes: **MutationObserver** - DOM変更をリアルタイム監視
+- :brain: **ファジーマッチングアルゴリズム** - 賢い検索機能
 
-## 技術的特徴
+## :rocket: 技術的ハイライト
 
-- **ファジーマッチング**: 高度な文字列マッチングアルゴリズムにより、部分的な文字列でも絵文字を検索可能
-- **リアルタイムサジェスト**: 入力と同時に絵文字候補を表示
-- **パフォーマンス最適化**: WeakSetを使用した重複処理防止、効率的なDOM操作
-- **アクセシビリティ**: キーボードナビゲーション完全対応
-- **レスポンシブUI**: ダークモード自動対応、美しいアニメーション
+- :star2: **超賢いファジーマッチング** - タイポしても大丈夫！部分文字列で絵文字発見
+- :lightning: **瞬間サジェスト** - 入力と同時に候補をリアルタイム表示
+- :zap: **パフォーマンス怪物** - WeakSetによる重複処理防止、効率的DOM操作
+- :wheelchair: **アクセシビリティ完璧** - キーボードナビゲーション100%対応
+- :rainbow: **レスポンシブUI美** - ダークモード自動切替、滑らかアニメーション
 
-## ライセンス
+## :gift: ライセンス
 
-MIT
+MIT :heart:
+
+---
+
+> :star: 気に入ったらスターお願いします！ :pray:  
+> :bug: バグ報告や機能要望は [Issues](../../issues) まで！  
+> :handshake: プルリクエストも大歓迎です！

@@ -14,7 +14,7 @@
   transition: transform 0.2s ease;
 }
 
-/* Emoji suggestion box styles */
+/* Emoji suggestion box styles - Light theme */
 .slack-emoji-suggestions {
   background: white;
   border: 1px solid #e0e0e0;
@@ -64,6 +64,33 @@
 .emoji-suggestion-item.selected .emoji-suggestion-name {
   color: #0066cc;
   font-weight: 500;
+}
+
+/* Dark theme styles */
+@media (prefers-color-scheme: dark) {
+  .slack-emoji-suggestions {
+    background: #2d2d2d;
+    border: 1px solid #444;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .emoji-suggestion-item {
+    border-bottom: 1px solid #404040;
+  }
+
+  .emoji-suggestion-item:hover,
+  .emoji-suggestion-item.selected {
+    background-color: #3d3d3d;
+  }
+
+  .emoji-suggestion-name {
+    color: #e0e0e0;
+  }
+
+  .emoji-suggestion-item.selected .emoji-suggestion-name {
+    color: #66b3ff;
+    font-weight: 500;
+  }
 }
 
 body {

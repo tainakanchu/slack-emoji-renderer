@@ -129,8 +129,9 @@ function resolveEmojiAlias(
       const aliasTarget = resolvedUrl.replace("alias:", "");
 
       if (!emojiData[aliasTarget]) {
-        console.warn(
-          `Alias target not found: ${aliasTarget} for emoji: ${emojiName}`,
+        // Slack標準絵文字へのエイリアスの場合は警告を出さずにnullを返す
+        console.debug(
+          `Alias target not found (likely standard emoji): ${aliasTarget} for emoji: ${emojiName}`,
         );
         return null;
       }
@@ -617,6 +618,7 @@ class SlackEmojiRenderer {
   ): void {
     const allEmojis = Object.keys(this.emojiData);
     // エイリアスも含めて有効な絵文字のみをフィルタ
+    // 標準絵文字へのエイリアスは除外される
     const validEmojis = allEmojis.filter((emojiName) => {
       const url = getEmojiUrl(emojiName, this.emojiData);
       return url !== null;

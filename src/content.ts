@@ -98,6 +98,210 @@ function calculateFuzzyScore(search: string, target: string): number {
   return Math.max(0, matchRatio + consecutiveBonus - lengthPenalty);
 }
 
+// Edit mode detection configuration
+interface EditModeDetectorConfig {
+  editButtonSelectors?: string[];
+  contentSelectors?: string[];
+  editAreaSelectors?: string[];
+  editButtonTexts?: string[];
+}
+
+/**
+ * 編集モードの検出と処理を担当するクラス
+ */
+class EditModeDetector {
+  private config: Required<EditModeDetectorConfig>;
+
+  constructor(config: EditModeDetectorConfig = {}) {
+    this.config = {
+      editButtonSelectors: config.editButtonSelectors || [
+        "button",
+        "a",
+        "[role='button']",
+      ],
+      contentSelectors: config.contentSelectors || [
+        // GitHub
+        ".comment-body",
+        ".js-comment-body",
+        ".markdown-body",
+        // Discord
+        ".messageContent",
+        ".markup",
+        // Reddit
+        ".md",
+        ".usertext-body",
+        // Slack
+        ".c-message__body",
+        ".p-rich_text_section",
+        // Twitter/X
+        ".tweet-text",
+        ".css-901oao",
+        // 一般的
+        ".content",
+        ".message",
+        ".post-content",
+        ".comment-content",
+        "[class*='content']",
+        "[class*='message']",
+        "[class*='comment']",
+        "[class*='post']",
+      ],
+      editAreaSelectors: config.editAreaSelectors || [
+        "textarea",
+        "input[type='text']",
+        "[contenteditable='true']",
+        // リッチテキストエディター
+        ".ql-editor",
+        ".tox-edit-area",
+        ".CodeMirror",
+        // 一般的な編集エリア
+        "[class*='editor']",
+        "[class*='input']",
+        "[role='textbox']",
+      ],
+      editButtonTexts: config.editButtonTexts || ["edit", "編集", "修改"],
+    };
+  }
+
+  /**
+   * 要素が編集ボタンかどうかを判定
+   */
+  isEditButton(element: HTMLElement): boolean {
+    if (!element) return false;
+
+    const button = element.closest(this.config.editButtonSelectors.join(", "));
+    if (!button) return false;
+
+    return this.checkEditButtonPatterns(button as HTMLElement);
+  }
+
+  /**
+   * 編集ボタンのパターンをチェック
+   */
+  private checkEditButtonPatterns(button: HTMLElement): boolean {
+    const buttonText = button.textContent?.toLowerCase() || "";
+    const buttonTitle = button.title?.toLowerCase() || "";
+    const buttonAriaLabel =
+      button.getAttribute("aria-label")?.toLowerCase() || "";
+
+    // テキストベースの検出
+    const textMatch = this.config.editButtonTexts.some(
+      (text) =>
+        buttonText.includes(text.toLowerCase()) ||
+        buttonTitle.includes(text.toLowerCase()) ||
+        buttonAriaLabel.includes(text.toLowerCase()),
+    );
+
+    if (textMatch) return true;
+
+    // サイト固有のクラス・アイコン検出
+    return this.checkSiteSpecificEditButtons(button);
+  }
+
+  /**
+   * サイト固有の編集ボタンパターンをチェック
+   */
+  private checkSiteSpecificEditButtons(button: HTMLElement): boolean {
+    // GitHub固有
+    if (
+      button.classList.contains("js-comment-edit-button") ||
+      button.querySelector('[data-octicon="pencil"]') !== null
+    ) {
+      return true;
+    }
+
+    // 一般的なアイコンクラス
+    if (
+      button.querySelector(
+        '.edit-icon, .fa-edit, .fa-pencil, [class*="edit"], [class*="pencil"]',
+      ) !== null
+    ) {
+      return true;
+    }
+
+    // Discord, Slack等のtooltip
+    const ariaLabel = button.getAttribute("aria-label") || "";
+    const dataTooltip = button.getAttribute("data-tooltip") || "";
+    if (ariaLabel.includes("Edit") || dataTooltip.includes("Edit")) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 編集ボタンから編集対象のコンテンツ要素を探す
+   */
+  findEditableContent(button: HTMLElement): HTMLElement | null {
+    let current = button.parentElement;
+
+    while (current && current !== document.body) {
+      const content = current.querySelector(
+        this.config.contentSelectors.join(", "),
+      );
+      if (content) {
+        return content as HTMLElement;
+      }
+      current = current.parentElement;
+    }
+
+    // フォールバック: 最も近い編集可能な要素を探す
+    return this.findNearestEditableParent(button);
+  }
+
+  /**
+   * 最も近い編集可能な要素を含む親要素を探す
+   */
+  private findNearestEditableParent(element: HTMLElement): HTMLElement | null {
+    let current = element.parentElement;
+
+    while (current && current !== document.body) {
+      if (this.hasEditableDescendants(current)) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+
+    return null;
+  }
+
+  /**
+   * 要素が編集可能な子要素を持つかチェック
+   */
+  hasEditableDescendants(element: HTMLElement): boolean {
+    return (
+      element.querySelector(
+        "textarea, input[type='text'], [contenteditable='true']",
+      ) !== null
+    );
+  }
+
+  /**
+   * 編集エリア（テキストエリア等）を探す
+   */
+  findActiveEditArea(parentElement: HTMLElement): HTMLElement | null {
+    const editArea = parentElement.querySelector(
+      this.config.editAreaSelectors.join(", "),
+    );
+    return editArea as HTMLElement;
+  }
+
+  /**
+   * 要素が編集可能かどうかを判定
+   */
+  isEditableElement(element: HTMLElement): boolean {
+    if (!element) return false;
+
+    return (
+      element.tagName === "TEXTAREA" ||
+      (element.tagName === "INPUT" &&
+        (element as HTMLInputElement).type === "text") ||
+      element.contentEditable === "true" ||
+      element.hasAttribute("contenteditable")
+    );
+  }
+}
+
 class SlackEmojiRenderer {
   private emojiData: ContentEmojiData = {};
   private isEnabled: boolean = true;
@@ -106,8 +310,10 @@ class SlackEmojiRenderer {
   private suggestionBox: HTMLDivElement | null = null;
   private currentInput: HTMLInputElement | HTMLTextAreaElement | null = null;
   private currentCaretPosition: number = 0;
+  private editModeDetector: EditModeDetector;
 
   constructor() {
+    this.editModeDetector = new EditModeDetector();
     this.init();
   }
 
@@ -307,6 +513,15 @@ class SlackEmojiRenderer {
     // キーボードイベントをキャプチャフェーズで処理して優先度を上げる
     document.addEventListener("keydown", this.handleKeydown.bind(this), true);
     document.addEventListener("click", this.handleClick.bind(this));
+    // フォーカスイベントで編集モード対応
+    document.addEventListener("focusin", this.handleFocusIn.bind(this));
+    document.addEventListener("focusout", this.handleFocusOut.bind(this));
+    // 編集ボタンクリック時の処理
+    document.addEventListener(
+      "click",
+      this.handleEditButtonClick.bind(this),
+      true,
+    );
     console.log("Input listeners setup complete");
   }
 
@@ -453,6 +668,70 @@ class SlackEmojiRenderer {
     // サジェストボックス外がクリックされた場合は閉じる
     if (this.suggestionBox) {
       this.removeSuggestionBox();
+    }
+  }
+
+  private handleFocusIn(event: Event): void {
+    const target = event.target as HTMLElement;
+
+    // 編集可能な要素にフォーカスが入った場合
+    if (this.editModeDetector.isEditableElement(target)) {
+      console.log("Focus in editable element:", target);
+      this.revertEmojisInElement(target);
+    }
+  }
+
+  private handleFocusOut(event: Event): void {
+    const target = event.target as HTMLElement;
+
+    // 編集可能な要素からフォーカスが外れた場合
+    if (this.editModeDetector.isEditableElement(target)) {
+      console.log("Focus out editable element:", target);
+      // 少し遅延させてから絵文字化を実行（他の処理を待つため）
+      setTimeout(() => {
+        this.processNode(target);
+      }, 100);
+    }
+  }
+
+  private revertEmojisInElement(element: HTMLElement): void {
+    // 要素内の絵文字画像を元のテキストに戻す
+    const emojiImages = element.querySelectorAll(".slack-emoji-renderer");
+
+    emojiImages.forEach((img) => {
+      const altText = img.getAttribute("alt");
+      if (altText && img.parentNode) {
+        const textNode = document.createTextNode(altText);
+        img.parentNode.replaceChild(textNode, img);
+      }
+    });
+
+    console.log("Reverted", emojiImages.length, "emoji images to text");
+  }
+
+  private handleEditButtonClick(event: Event): void {
+    const target = event.target as HTMLElement;
+
+    // GitHub等の編集ボタンを検出
+    if (this.editModeDetector.isEditButton(target)) {
+      console.log("Edit button clicked:", target);
+
+      // 編集対象のコンテンツ要素を探す
+      const contentElement = this.editModeDetector.findEditableContent(target);
+      if (contentElement) {
+        console.log("Found editable content:", contentElement);
+        // 即座に絵文字を元のテキストに戻す
+        this.revertEmojisInElement(contentElement);
+
+        // 編集モードが表示されるまで少し待ってから再度処理
+        setTimeout(() => {
+          const editArea =
+            this.editModeDetector.findActiveEditArea(contentElement);
+          if (editArea) {
+            this.revertEmojisInElement(editArea);
+          }
+        }, 200);
+      }
     }
   }
 

@@ -1,6 +1,3 @@
-// Import emoji utilities
-import { getEmojiUrl } from "./emoji-utils";
-
 // Types defined inline for browser compatibility
 type ContentEmojiData = Record<string, string>;
 
@@ -29,7 +26,7 @@ interface MatchResult {
 function fuzzySearch(
   searchTerm: string,
   candidates: string[],
-  maxResults: number = 10
+  maxResults: number = 10,
 ): MatchResult[] {
   const searchLower = searchTerm.toLowerCase();
 
@@ -101,6 +98,85 @@ function calculateFuzzyScore(search: string, target: string): number {
   return Math.max(0, matchRatio + consecutiveBonus - lengthPenalty);
 }
 
+// エイリアス対応のヘルパー関数
+function resolveEmojiAlias(
+  emojiName: string,
+  emojiData: ContentEmojiData,
+): string | null {
+  if (!emojiData[emojiName]) {
+    return null;
+  }
+
+  let resolvedUrl = emojiData[emojiName];
+  let currentName = emojiName;
+  const visited = new Set<string>(); // 循環参照を防ぐ
+
+  // エイリアスチェーンを辿る（最大10回まで）
+  while (typeof resolvedUrl === "string" && visited.size < 10) {
+    if (visited.has(currentName)) {
+      console.warn(`Circular alias detected for emoji: ${emojiName}`);
+      return null;
+    }
+
+    // 既にURLの場合は終了
+    if (resolvedUrl.startsWith("http") || resolvedUrl.startsWith("data:")) {
+      return resolvedUrl;
+    }
+
+    // alias: プレフィックスがある場合
+    if (resolvedUrl.startsWith("alias:")) {
+      visited.add(currentName);
+      const aliasTarget = resolvedUrl.replace("alias:", "");
+
+      if (!emojiData[aliasTarget]) {
+        console.warn(
+          `Alias target not found: ${aliasTarget} for emoji: ${emojiName}`,
+        );
+        return null;
+      }
+
+      currentName = aliasTarget;
+      resolvedUrl = emojiData[aliasTarget];
+      continue;
+    }
+
+    // 直接絵文字名を参照している場合（Slackでよくあるパターン）
+    if (emojiData[resolvedUrl]) {
+      visited.add(currentName);
+      currentName = resolvedUrl;
+      resolvedUrl = emojiData[resolvedUrl];
+      continue;
+    }
+
+    // どちらでもない場合は終了
+    break;
+  }
+
+  // 最終的にURLが得られたかチェック
+  if (
+    typeof resolvedUrl === "string" &&
+    (resolvedUrl.startsWith("http") || resolvedUrl.startsWith("data:"))
+  ) {
+    return resolvedUrl;
+  }
+
+  return null;
+}
+
+function getAllEmojiNames(emojiData: ContentEmojiData): string[] {
+  return Object.keys(emojiData);
+}
+
+function getEmojiUrl(
+  emojiName: string,
+  emojiData: ContentEmojiData,
+): string | null {
+  const resolvedUrl = resolveEmojiAlias(emojiName, emojiData);
+  return resolvedUrl;
+}
+
+// Edit mode utilities (will be loaded from separate file)
+
 class SlackEmojiRenderer {
   private emojiData: ContentEmojiData = {};
   private isEnabled: boolean = true;
@@ -121,7 +197,7 @@ class SlackEmojiRenderer {
     console.log(
       "Loaded emoji data:",
       Object.keys(this.emojiData).length,
-      "emojis"
+      "emojis",
     );
     console.log("Extension enabled:", this.isEnabled);
 
@@ -149,7 +225,7 @@ class SlackEmojiRenderer {
         (result: ContentEmojiStorageData) => {
           this.emojiData = result.emojiData || {};
           resolve();
-        }
+        },
       );
     });
   }
@@ -183,7 +259,7 @@ class SlackEmojiRenderer {
   private processExistingNodes(): void {
     const walker = document.createTreeWalker(
       document.body,
-      NodeFilter.SHOW_TEXT
+      NodeFilter.SHOW_TEXT,
     );
 
     const textNodes: Text[] = [];
@@ -317,7 +393,7 @@ class SlackEmojiRenderer {
     document.addEventListener(
       "click",
       this.handleEditButtonClick.bind(this),
-      true
+      true,
     );
     console.log("Input listeners setup complete");
   }
@@ -350,7 +426,7 @@ class SlackEmojiRenderer {
         "Input event - value:",
         value,
         "caret:",
-        this.currentCaretPosition
+        this.currentCaretPosition,
       );
 
       // :で始まる未完成の絵文字パターンを検索
@@ -362,7 +438,7 @@ class SlackEmojiRenderer {
           "Found emoji pattern:",
           emojiMatch[0],
           "search term:",
-          searchTerm
+          searchTerm,
         );
         this.showSuggestions(searchTerm, target);
       } else {
@@ -383,7 +459,7 @@ class SlackEmojiRenderer {
     console.log("Keydown event:", event.key, "Suggestion box visible");
 
     const suggestions = this.suggestionBox.querySelectorAll(
-      ".emoji-suggestion-item"
+      ".emoji-suggestion-item",
     );
 
     if (suggestions.length === 0) {
@@ -391,14 +467,14 @@ class SlackEmojiRenderer {
     }
 
     let selectedIndex = Array.from(suggestions).findIndex((item) =>
-      item.classList.contains("selected")
+      item.classList.contains("selected"),
     );
 
     console.log(
       "Current selected index:",
       selectedIndex,
       "Total suggestions:",
-      suggestions.length
+      suggestions.length,
     );
 
     switch (event.key) {
@@ -515,7 +591,7 @@ class SlackEmojiRenderer {
 
       // 編集対象のコンテンツ要素を探す
       const contentElement = (window as any).EditModeUtils.findEditableContent(
-        target
+        target,
       );
       if (contentElement) {
         console.log("Found editable content:", contentElement);
@@ -525,7 +601,7 @@ class SlackEmojiRenderer {
         // 編集モードが表示されるまで少し待ってから再度処理
         setTimeout(() => {
           const editArea = (window as any).EditModeUtils.findActiveEditArea(
-            contentElement
+            contentElement,
           );
           if (editArea) {
             this.revertEmojisInElement(editArea);
@@ -537,7 +613,7 @@ class SlackEmojiRenderer {
 
   private showSuggestions(
     searchTerm: string,
-    inputElement: HTMLInputElement | HTMLTextAreaElement
+    inputElement: HTMLInputElement | HTMLTextAreaElement,
   ): void {
     const allEmojis = Object.keys(this.emojiData);
     // エイリアスも含めて有効な絵文字のみをフィルタ
@@ -547,7 +623,7 @@ class SlackEmojiRenderer {
     });
 
     console.log(
-      `Searching for: "${searchTerm}" (${validEmojis.length} valid emojis out of ${allEmojis.length} total)`
+      `Searching for: "${searchTerm}" (${validEmojis.length} valid emojis out of ${allEmojis.length} total)`,
     );
 
     const scoredEmojis = fuzzySearch(searchTerm, validEmojis, 10);
@@ -560,14 +636,14 @@ class SlackEmojiRenderer {
     const matchingEmojis = scoredEmojis.map((item) => item.name);
     console.log(
       "Top suggestions:",
-      scoredEmojis.slice(0, 5).map((item) => `${item.name}(${item.score})`)
+      scoredEmojis.slice(0, 5).map((item) => `${item.name}(${item.score})`),
     );
     this.createSuggestionBox(matchingEmojis, inputElement);
   }
 
   private createSuggestionBox(
     emojis: string[],
-    inputElement: HTMLInputElement | HTMLTextAreaElement
+    inputElement: HTMLInputElement | HTMLTextAreaElement,
   ): void {
     this.removeSuggestionBox();
 
@@ -623,7 +699,7 @@ class SlackEmojiRenderer {
   }
 
   private positionSuggestionBox(
-    inputElement: HTMLInputElement | HTMLTextAreaElement
+    inputElement: HTMLInputElement | HTMLTextAreaElement,
   ): void {
     if (!this.suggestionBox) return;
 
@@ -637,7 +713,7 @@ class SlackEmojiRenderer {
   }
 
   private getCaretPosition(
-    inputElement: HTMLInputElement | HTMLTextAreaElement
+    inputElement: HTMLInputElement | HTMLTextAreaElement,
   ): { left: number; top: number } {
     const value = inputElement.value;
     const caretIndex = inputElement.selectionStart || 0;
@@ -661,7 +737,7 @@ class SlackEmojiRenderer {
     if (!this.suggestionBox) return;
 
     const suggestions = this.suggestionBox.querySelectorAll(
-      ".emoji-suggestion-item"
+      ".emoji-suggestion-item",
     );
     suggestions.forEach((item, i) => {
       item.classList.toggle("selected", i === index);
@@ -699,7 +775,7 @@ class SlackEmojiRenderer {
     if (emojiMatch) {
       const newBeforeCaret = beforeCaret.substring(
         0,
-        beforeCaret.length - emojiMatch[0].length
+        beforeCaret.length - emojiMatch[0].length,
       );
       const newValue = newBeforeCaret + emojiName + " " + afterCaret;
 
@@ -719,7 +795,7 @@ class SlackEmojiRenderer {
   }
 
   private replaceEmojisInInput(
-    inputElement: HTMLInputElement | HTMLTextAreaElement
+    inputElement: HTMLInputElement | HTMLTextAreaElement,
   ): void {
     // テキスト入力フィールドでは絵文字置換を行わない
     // サジェスト機能で選択されたもののみ処理する
@@ -759,7 +835,7 @@ chrome.runtime.onMessage.addListener(
       slackEmojiRenderer.toggleExtension(request.enabled);
       sendResponse({ success: true });
     }
-  }
+  },
 );
 
 console.log("Slack Emoji Renderer loaded");
